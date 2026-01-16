@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: centreon-poller
+  labels:
+    app: centreon-poller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: centreon-poller
+  template:
+    metadata:
+      labels:
+        app: centreon-poller
+    spec:
+      containers:
+      - name: poller
+        image: votre-registre/centreon-poller:latest # Votre image modernisée
+        ports:
+        - containerPort: 6022 # SSH
+        - containerPort: 5556 # Gorgone
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"] # REQUIS pour le script de routes (custom-route.sh)
+          privileged: false
+        volumeMounts:
+        - name: engine-config
+          mountPath: /etc/centreon-engine
+        - name: broker-config
+          mountPath: /etc/centreon-broker
+        - name: gorgone-config
+          mountPath: /etc/centreon-gorgone
+        - name: engine-logs
+          mountPath: /var/log/centreon-engine
+      volumes:
+      # On utilise des PersistentVolumeClaims pour que la config survive au reboot du Pod
+      - name: engine-config
+        persistentVolumeClaim:
+          claimName: centreon-engine-pvc
+      - name: broker-config
+        persistentVolumeClaim:
+          claimName: centreon-broker-pvc
+      - name: gorgone-config
+        persistentVolumeClaim:
+          claimName: centreon-gorgone-pvc
+      - name: engine-logs
+        emptyDir: {} # Les logs peuvent être éphémères ou envoyés vers un collecteur
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: centreon-poller-service
+spec:
+  type: NodePort # Ou LoadBalancer selon votre cluster
+  selector:
+    app: centreon-poller
+  ports:
+    - name: ssh-poller
+      protocol: TCP
+      port: 6022
+      targetPort: 6022
+      nodePort: 36022 # Port exposé sur vos nœuds K8s
+    - name: gorgone
+      protocol: TCP
+      port: 5556
+      targetPort: 5556
+      nodePort: 35556
