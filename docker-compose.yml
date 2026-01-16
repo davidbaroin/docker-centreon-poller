@@ -1,0 +1,19 @@
+services:
+  centreon-poller:
+    build: .
+    container_name: centreon-poller-prod
+    restart: always
+    # C'est ici que l'on place la section volumes
+    volumes:
+      - ./config/engine:/etc/centreon-engine
+      - ./config/broker:/etc/centreon-broker
+      - ./config/gorgone:/etc/centreon-gorgone
+      - ./logs/engine:/var/log/centreon-engine
+      - ./logs/broker:/var/log/centreon-broker
+    ports:
+      - "6022:6022"  # Port SSH pour le Central
+      - "5556:5556"  # Port Gorgone
+    cap_add:
+      - NET_ADMIN    # Requis pour que le script custom-route.sh puisse modifier les routes
+    devices:
+      - /dev/net/tun:/dev/net/tun # Requis si vous utilisez OpenVPN
