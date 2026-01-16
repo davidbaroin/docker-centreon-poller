@@ -1,1 +1,15 @@
-docker run -it --rm -p 6022:22 -v /home/thalesfba/Documents/Docker/centreon/centreon-poller-docker/data/broker:/etc/centreon-broker -v /home/thalesfba/Documents/Docker/centreon/centreon-poller-docker/data/engine:/etc/centreon-engine -e AUTHORIZED_KEYS='ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCnYWQ7TMHiZrLHGshQ7ExQl948QOp0O6JM9lxcszu+QLbu7vBxkFUoI4/8rM2BX6WkMOX8NMH4s80dE8JHZ/POHoS3L6o6vQsZkvhmHAtla9dgMWDre6KEMW5NrLRq+Gjt83jkqPapzJ5s5NtFGjvWJI0LlfT08v//liK0gQLyNzKbUiidWwnjzFBiFxASmjVABDsdSnOomeZ+b2xIpp4PnUT16tSSU+WCt4ssjQZ/jSIStqoAk7BAqObSes0/Qra2VeG3cVFpUBNj7vqBbsETOS6FCWwh0+upGM/7iKAYzH8oA0AnzdjHOhfqYvTdPiFJVDflkXGKL7WpuzZJEw/p thalesfba@thalesfba-HP-EliteBook-8560p' centreon_poller
+#!/bin/bash
+
+# A. Gestion des routes OpenVPN (si config présente)
+if [ -f "/etc/openvpn/client.conf" ]; then
+    echo "Démarrage de la route OpenVPN..."
+    /usr/local/bin/custom-route.sh
+fi
+
+# B. Correction dynamique des droits (en cas de montage de volumes externes)
+chown -R centreon-engine:centreon-engine /var/log/centreon-engine /var/lib/centreon-engine
+chown -R centreon-broker:centreon-broker /var/log/centreon-broker /var/lib/centreon-broker
+
+# C. Lancement de Supervisor en mode premier plan
+# C'est lui qui va gérer le cycle de vie de centengine et sshd
+exec /usr/bin/supervisord -c /etc/supervisord.conf
